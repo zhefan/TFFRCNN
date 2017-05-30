@@ -16,3 +16,4 @@ data/KITTI*
 output
 logs
 utest
+*~

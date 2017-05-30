@@ -30,30 +30,30 @@ def get_network(name):
         elif name.split('_')[1] == 'testold':
             return VGGnet_testold()
         else:
-           raise KeyError('Unknown dataset: {}'.format(name))
+           raise KeyError('Unknown mode (train or test): {}'.format(name))
     elif name.split('_')[0] == 'Resnet50':
         if name.split('_')[1] == 'test':
             return Resnet50_test()
         elif name.split('_')[1] == 'train':
             return Resnet50_train()
         else:
-            raise KeyError('Unknown dataset: {}'.format(name))
+            raise KeyError('Unknown mode (train or test): {}'.format(name))
     elif name.split('_')[0] == 'Resnet101':
         if name.split('_')[1] == 'test':
             return Resnet101_test()
         elif name.split('_')[1] == 'train':
             return Resnet101_train()
         else:
-            raise KeyError('Unknown dataset: {}'.format(name))
+            raise KeyError('Unknown mode (train or test): {}'.format(name))
     elif name.split('_')[0] == 'PVAnet':
         if name.split('_')[1] == 'test':
            return PVAnet_test()
         elif name.split('_')[1] == 'train':
            return PVAnet_train()
         else:
-            raise KeyError('Unknown dataset: {}'.format(name))
+            raise KeyError('Unknown mode (train or test): {}'.format(name))
     else:
-        raise KeyError('Unknown dataset: {}'.format(name))
+        raise KeyError('Unknown networks: {}'.format(name))
 
 def list_networks():
     """List all registered imdbs."""
