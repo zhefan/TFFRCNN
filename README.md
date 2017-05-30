@@ -1,5 +1,11 @@
 # TFFRCNN
 
+###
+```Shell
+python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_imagenet.npy --imdb voc_2007_trainval --iters 70000 --cfg ./experiments/cfgs/faster_rcnn_end2end.yml --network VGGnet_train --set EXP_DIR ./data/
+python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/Resnet50.npy --imdb voc_2007_trainval --iters 70000 --cfg ./experiments/cfgs/faster_rcnn_end2end.yml --network Resnet50_train --restore 0
+```
+
 This is an experimental **T**ensor **F**low implementation of **F**aster **RCNN** (**TFFRCNN**), mainly based on the work of [smallcorgi](https://github.com/smallcorgi/Faster-RCNN_TF) and [rbgirshick](https://github.com/rbgirshick/py-faster-rcnn). I have re-organized the libraries under `lib` path, making each of python modules independent to each other, so you can understand, re-write the code easily.
 
 For details about R-CNN please refer to the paper [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](http://arxiv.org/pdf/1506.01497v3.pdf) by Shaoqing Ren, Kaiming He, Ross Girshick, Jian Sun.
