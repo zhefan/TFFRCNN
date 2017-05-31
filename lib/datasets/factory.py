@@ -11,6 +11,7 @@ __sets = {}
 
 import numpy as np
 
+from .progress import progress
 from .pascal_voc import pascal_voc
 from .imagenet3d import imagenet3d
 from .kitti import kitti
@@ -27,6 +28,12 @@ def _selective_search_IJCV_top_k(split, year, top_k):
     imdb.roidb_handler = imdb.selective_search_IJCV_roidb
     imdb.config['top_k'] = top_k
     return imdb
+
+# Set up progress
+for split in ['train', 'test']:
+    name = 'progress_{}'.format(split)
+    __sets[name] = (lambda split=split: progress(split))
+
 
 # Set up voc_<year>_<split> using selective search "fast" mode
 for year in ['2007', '2012', '0712']:
