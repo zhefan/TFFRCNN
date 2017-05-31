@@ -27,21 +27,18 @@ from .voc_eval import voc_eval
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
 # <<<< obsolete
-class progress(imdb):
+class ade20k(imdb):
     def __init__(self, image_set, devkit_path=None):
-        imdb.__init__(self, 'progress')
+        imdb.__init__(self, 'ade20k')
         self._year = '2007'
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
                             else devkit_path
-        self._data_path = os.path.join(self._devkit_path, 'progress')
+        self._data_path = os.path.join(self._devkit_path, 'ADE20K_2016_07_26')
         self._classes = ('__background__', # always index 0
-                         'tide', 'spray_bottle_a', 'waterpot', 'sugar',
-                         'red_bowl', 'clorox', 'shampoo', 'downy', 'salt',
-                         'toy', 'detergent', 'scotch_brite', 'cola',
-                         'blue_cup', 'ranch')
+                         'handle')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
-        self._image_ext = '.png'
+        self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
         #self._roidb_handler = self.selective_search_roidb
@@ -346,6 +343,6 @@ class progress(imdb):
             self.config['cleanup'] = True
 
 if __name__ == '__main__':
-    d = progress('train')
+    d = ade20k('train')
     res = d.roidb
     from IPython import embed; embed()

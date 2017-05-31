@@ -11,6 +11,7 @@ __sets = {}
 
 import numpy as np
 
+from .ade20k import ade20k
 from .progress import progress
 from .pascal_voc import pascal_voc
 from .imagenet3d import imagenet3d
@@ -28,6 +29,12 @@ def _selective_search_IJCV_top_k(split, year, top_k):
     imdb.roidb_handler = imdb.selective_search_IJCV_roidb
     imdb.config['top_k'] = top_k
     return imdb
+
+# Set up ade20k
+for split in ['train', 'test']:
+    name = 'ade20k_{}'.format(split)
+    __sets[name] = (lambda split=split: ade20k(split))
+
 
 # Set up progress
 for split in ['train', 'test']:

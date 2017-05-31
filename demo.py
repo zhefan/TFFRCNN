@@ -15,6 +15,14 @@ from lib.fast_rcnn.test import im_detect
 from lib.fast_rcnn.nms_wrapper import nms
 from lib.utils.timer import Timer
 
+# progress-obj
+CLASSES = ('__background__', # always index 0
+           'tide', 'spray_bottle_a', 'waterpot', 'sugar',
+           'red_bowl', 'clorox', 'shampoo', 'downy', 'salt',
+           'toy', 'detergent', 'scotch_brite', 'cola',
+           'blue_cup', 'ranch')
+
+'''
 # VOC
 CLASSES = ('__background__',
            'aeroplane', 'bicycle', 'bird', 'boat',
@@ -23,7 +31,6 @@ CLASSES = ('__background__',
            'motorbike', 'person', 'pottedplant',
            'sheep', 'sofa', 'train', 'tvmonitor')
 # coco
-'''
 CLASSES = ('__background__','person','bicycle','car','motorcycle',
 			'airplane','bus','train','truck','boat','traffic light',
 			'fire hydrant','stop sign','parking meter','bench','bird',
@@ -73,7 +80,7 @@ def vis_detections(im, class_name, dets, ax, thresh=0.5):
     plt.draw()
 
 
-def demo(sess, net, image_name):
+def demo(sess, net, image_name, CONF_THRESH):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -92,7 +99,6 @@ def demo(sess, net, image_name):
     fig, ax = plt.subplots(figsize=(12, 12))
     ax.imshow(im, aspect='equal')
 
-    CONF_THRESH = 0.8
     NMS_THRESH = 0.3
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1  # because we skipped background
@@ -117,6 +123,8 @@ def parse_args():
                         default='VGGnet_test')
     parser.add_argument('--model', dest='model', help='Model path',
                         default=' ')
+    parser.add_argument('--conf', dest='conf', help='Confidence threshold [0.8]',
+                        default=0.8, type=float)
 
     args = parser.parse_args()
 
@@ -127,8 +135,8 @@ if __name__ == '__main__':
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     args = parse_args()
-
-    if args.model == ' ' or not os.path.exists(args.model):
+    model_ext = glob.glob(args.model + '.*')
+    if args.model == ' ' or not ( os.path.exists(args.model) or len(model_ext) == 3 ) :
         print ('current path is ' + os.path.abspath(__file__))
         raise IOError(('Error: Model not found.\n'))
 
@@ -137,9 +145,16 @@ if __name__ == '__main__':
     # load network
     net = get_network(args.demo_net)
     # load model
-    print ('Loading network {:s}... '.format(args.demo_net)),
-    saver = tf.train.Saver()
-    saver.restore(sess, args.model)
+    if len(model_ext) == 3: # new checkpoint file
+    	print ('Loading meta data {:s}...'.format(args.model+'.meta')),
+    	saver = tf.train.import_meta_graph(args.model+'.meta')
+    	saver.restore(sess, args.model)
+    	sess.run(tf.global_variables_initializer())
+    else: # old checkpoint file
+    	print ('Loading network {:s}... '.format(args.demo_net)),
+    	saver = tf.train.Saver()
+    	saver.restore(sess, args.model)
+    
     print (' done.')
 
     # Warmup on a dummy image
@@ -153,7 +168,6 @@ if __name__ == '__main__':
     for im_name in im_names:
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
         print 'Demo for {:s}'.format(im_name)
-        demo(sess, net, im_name)
+        demo(sess, net, im_name, args.conf)
 
     plt.show()
-
