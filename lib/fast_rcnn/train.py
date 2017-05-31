@@ -159,6 +159,18 @@ class SolverWrapper(object):
 
         # resuming a trainer
         if restore:
+        	model_checkpoint_path = tf.train.latest_checkpoint(self.output_dir)
+        	self.saver.restore(sess, model_checkpoint_path)
+        	stem = os.path.splitext(os.path.basename(model_checkpoint_path))[0]
+        	restore_iter = int(stem.split('_')[-1])
+        	sess.run(global_step.assign(restore_iter))
+        	print 'loading checkpoint file...'
+            
+        	if model_checkpoint_path is None:
+        		raise Exception('Check your checkpoint path' + model_checkpoint_path)
+        	else:
+        		print model_checkpoint_path
+        	'''
             try:
                 ckpt = tf.train.get_checkpoint_state(self.output_dir)
                 print 'Restoring from {}...'.format(ckpt.model_checkpoint_path),
@@ -169,6 +181,7 @@ class SolverWrapper(object):
                 print 'done'
             except:
                 raise 'Check your pretrained {:s}'.format(ckpt.model_checkpoint_path)
+            '''
 
         last_snapshot_iter = -1
         timer = Timer()
