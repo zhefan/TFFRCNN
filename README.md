@@ -4,7 +4,7 @@
 ```Shell
 python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_imagenet.npy --imdb voc_2007_trainval --iters 70000 --cfg ./experiments/cfgs/faster_rcnn_end2end.yml --network VGGnet_train --restore 0
 python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/Resnet50.npy --imdb voc_2007_trainval --iters 70000 --cfg ./experiments/cfgs/faster_rcnn_end2end.yml --network Resnet50_train --restore 0
-python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_imagenet.npy --imdb ade20k_train --iters 70000 --cfg ./experiments/cfgs/faster_rcnn_end2end_ade20k.yml --network VGGnet_train --restore 0
+python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_imagenet.npy --imdb ade20k_train --iters 70000 --cfg ./experiments/cfgs/ade20k.yml --network VGGnet_train --restore 0
 python demo.py --model output/faster_rcnn_voc_vgg/ade20k/VGGnet_fast_rcnn_iter_3000.ckpt --conf 0.01 --cfg ./experiments/cfgs/ade20k.yml
 ```
 
