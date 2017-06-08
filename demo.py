@@ -11,7 +11,6 @@ print(this_dir)
 
 from lib.networks.factory import get_network
 from lib.fast_rcnn.config import cfg, cfg_from_file
-#from lib.fast_rcnn.test import im_detect
 from lib.utils.blob import im_list_to_blob
 from lib.fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
 from lib.fast_rcnn.nms_wrapper import nms
