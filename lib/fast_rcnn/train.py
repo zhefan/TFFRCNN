@@ -112,10 +112,10 @@ class SolverWrapper(object):
             self.net.build_loss(ohem=cfg.TRAIN.OHEM)
 
         # scalar summary
-        tf.summary.scalar('rpn_rgs_loss', rpn_loss_box)
+        tf.summary.scalar('rpn_box_loss', rpn_loss_box)
         tf.summary.scalar('rpn_cls_loss', rpn_cross_entropy)
         tf.summary.scalar('cls_loss', cross_entropy)
-        tf.summary.scalar('rgs_loss', loss_box)
+        tf.summary.scalar('box_loss', loss_box)
         tf.summary.scalar('loss', loss)
         summary_op = tf.summary.merge_all()
 
@@ -125,15 +125,17 @@ class SolverWrapper(object):
             self.build_image_summary()
 
         # optimizer
+        lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
+        # lr = tf.Variable(0.0, trainable=False)
+        momentum = cfg.TRAIN.MOMENTUM
         if cfg.TRAIN.SOLVER == 'Adam':
-            opt = tf.train.AdamOptimizer(cfg.TRAIN.LEARNING_RATE)
+            opt = tf.train.AdamOptimizer(lr)
         elif cfg.TRAIN.SOLVER == 'RMS':
-            opt = tf.train.RMSPropOptimizer(cfg.TRAIN.LEARNING_RATE)
-        else:
-            lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
-            # lr = tf.Variable(0.0, trainable=False)
-            momentum = cfg.TRAIN.MOMENTUM
+            opt = tf.train.RMSPropOptimizer(lr)
+        elif cfg.TRAIN.SOLVER == 'Momentum':
             opt = tf.train.MomentumOptimizer(lr, momentum)
+        else:
+            opt = tf.train.GradientDescentOptimizer(lr)
 
         global_step = tf.Variable(0, trainable=False)
         with_clip = True

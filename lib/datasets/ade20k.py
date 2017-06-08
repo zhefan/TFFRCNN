@@ -30,13 +30,12 @@ from ..fast_rcnn.config import cfg
 class ade20k(imdb):
     def __init__(self, image_set, devkit_path=None):
         imdb.__init__(self, 'ade20k')
-        self._year = '2007'
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
                             else devkit_path
-        self._data_path = os.path.join(self._devkit_path, 'ADE20K_2016_07_26')
+        self._data_path = os.path.join(self._devkit_path, 'ade20k')
         self._classes = ('__background__', # always index 0
-                         'handle')
+                         'door')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
@@ -49,7 +48,7 @@ class ade20k(imdb):
         # PASCAL specific config options
         self.config = {'cleanup'     : True,
                        'use_salt'    : True,
-                       'use_diff'    : True,
+                       'use_diff'    : False,
                        'matlab_eval' : False,
                        'rpn_file'    : None,
                        'min_size'    : 2}
@@ -132,7 +131,7 @@ class ade20k(imdb):
             print '{} ss roidb loaded from {}'.format(self.name, cache_file)
             return roidb
 
-        if int(self._year) == 2007 or self._image_set != 'test':
+        if self._image_set != 'test':
             gt_roidb = self.gt_roidb()
             ss_roidb = self._load_selective_search_roidb(gt_roidb)
             roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
@@ -145,7 +144,7 @@ class ade20k(imdb):
         return roidb
 
     def rpn_roidb(self):
-        if int(self._year) == 2007 or self._image_set != 'test':
+        if self._image_set != 'test':
             gt_roidb = self.gt_roidb()
             rpn_roidb = self._load_rpn_roidb(gt_roidb)
             roidb = imdb.merge_roidbs(gt_roidb, rpn_roidb)
@@ -202,6 +201,7 @@ class ade20k(imdb):
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
+        # just the same as gt_classes
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
         # "Seg" area for pascal is just the box area
         seg_areas = np.zeros((num_objs), dtype=np.float32)
@@ -210,8 +210,8 @@ class ade20k(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
+            x1 = max(float(bbox.find('xmin').text) - 1, 0)
+            y1 = max(float(bbox.find('ymin').text) - 1, 0)
             x2 = float(bbox.find('xmax').text) - 1
             y2 = float(bbox.find('ymax').text) - 1
             cls = self._class_to_ind[obj.find('name').text.lower().strip()]
@@ -239,7 +239,7 @@ class ade20k(imdb):
         path = os.path.join(
             self._devkit_path,
             'results',
-            'VOC' + self._year,
+            'VOC',
             'Main',
             filename)
         return path
@@ -265,19 +265,19 @@ class ade20k(imdb):
     def _do_python_eval(self, output_dir = 'output'):
         annopath = os.path.join(
             self._devkit_path,
-			'progress/'
+			'ade20k/'
             'Annotations',
             '{:s}.xml')
         imagesetfile = os.path.join(
             self._devkit_path,
-			'progress/',
+			'ade20k/',
             'ImageSets',
             'Main',
             self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         aps = []
         # The PASCAL VOC metric changed in 2010
-        use_07_metric = True if int(self._year) < 2010 else False
+        use_07_metric = False
         print 'VOC07 metric? ' + ('Yes' if use_07_metric else 'No')
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)

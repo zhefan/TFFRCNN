@@ -10,17 +10,27 @@ this_dir = osp.dirname(__file__)
 print(this_dir)
 
 from lib.networks.factory import get_network
-from lib.fast_rcnn.config import cfg
-from lib.fast_rcnn.test import im_detect
+from lib.fast_rcnn.config import cfg, cfg_from_file
+#from lib.fast_rcnn.test import im_detect
+from lib.utils.blob import im_list_to_blob
+from lib.fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
 from lib.fast_rcnn.nms_wrapper import nms
 from lib.utils.timer import Timer
 
+'''
+'''
+# ade20k
+CLASSES = ('__background__', # always index 0
+           'door')
+
 # progress-obj
+'''
 CLASSES = ('__background__', # always index 0
            'tide', 'spray_bottle_a', 'waterpot', 'sugar',
            'red_bowl', 'clorox', 'shampoo', 'downy', 'salt',
            'toy', 'detergent', 'scotch_brite', 'cola',
            'blue_cup', 'ranch')
+'''
 
 '''
 # VOC
@@ -30,6 +40,9 @@ CLASSES = ('__background__',
            'cow', 'diningtable', 'dog', 'horse',
            'motorbike', 'person', 'pottedplant',
            'sheep', 'sofa', 'train', 'tvmonitor')
+'''
+
+'''
 # coco
 CLASSES = ('__background__','person','bicycle','car','motorcycle',
 			'airplane','bus','train','truck','boat','traffic light',
@@ -46,9 +59,144 @@ CLASSES = ('__background__','person','bicycle','car','motorcycle',
 			'teddy bear','hair drier','toothbrush')
 '''
 
-
-
 # CLASSES = ('__background__','person','bike','motorbike','car','bus')
+
+def _get_rois_blob(im_rois, im_scale_factors):
+    """Converts RoIs into network inputs.
+    Arguments:
+        im_rois (ndarray): R x 4 matrix of RoIs in original image coordinates
+        im_scale_factors (list): scale factors as returned by _get_image_blob
+    Returns:
+        blob (ndarray): R x 5 matrix of RoIs in the image pyramid
+    """
+    rois, levels = _project_im_rois(im_rois, im_scale_factors)
+    rois_blob = np.hstack((levels, rois))
+    return rois_blob.astype(np.float32, copy=False)
+    
+def _get_image_blob(im):
+    """Converts an image into a network input.
+    Arguments:
+        im (ndarray): a color image in BGR order
+    Returns:
+        blob (ndarray): a data blob holding an image pyramid
+        im_scale_factors (list): list of image scales (relative to im) used
+            in the image pyramid
+    """
+    im_orig = im.astype(np.float32, copy=True)
+    im_orig -= cfg.PIXEL_MEANS
+
+    im_shape = im_orig.shape
+    im_size_min = np.min(im_shape[0:2])
+    im_size_max = np.max(im_shape[0:2])
+
+    processed_ims = []
+    im_scale_factors = []
+
+    for target_size in cfg.TEST.SCALES:
+        im_scale = float(target_size) / float(im_size_min)
+        # Prevent the biggest axis from being more than MAX_SIZE
+        if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
+            im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
+        im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
+                        interpolation=cv2.INTER_LINEAR)
+        im_scale_factors.append(im_scale)
+        processed_ims.append(im)
+
+    # Create a blob to hold the input images
+    blob = im_list_to_blob(processed_ims)
+
+    return blob, np.array(im_scale_factors)
+
+
+def _get_blobs(im, rois):
+    """Convert an image and RoIs within that image into network inputs."""
+    if cfg.TEST.HAS_RPN:
+        blobs = {'data' : None, 'rois' : None}
+        blobs['data'], im_scale_factors = _get_image_blob(im)
+    else:
+        blobs = {'data' : None, 'rois' : None}
+        blobs['data'], im_scale_factors = _get_image_blob(im)
+        if cfg.IS_MULTISCALE:
+            if cfg.IS_EXTRAPOLATING:
+                blobs['rois'] = _get_rois_blob(rois, cfg.TEST.SCALES)
+            else:
+                blobs['rois'] = _get_rois_blob(rois, cfg.TEST.SCALES_BASE)
+        else:
+            blobs['rois'] = _get_rois_blob(rois, cfg.TEST.SCALES_BASE)
+
+    return blobs, im_scale_factors
+    
+    
+def im_detect(sess, net, im, boxes=None):
+    """Detect object classes in an image given object proposals.
+    Arguments:
+        net (caffe.Net): Fast R-CNN network to use
+        im (ndarray): color image to test (in BGR order)
+        boxes (ndarray): R x 4 array of object proposals
+    Returns:
+        scores (ndarray): R x K array of object class scores (K includes
+            background as object category 0)
+        boxes (ndarray): R x (4*K) array of predicted bounding boxes
+    """
+
+    blobs, im_scales = _get_blobs(im, boxes)
+
+    # When mapping from image ROIs to feature map ROIs, there's some aliasing
+    # (some distinct image ROIs get mapped to the same feature ROI).
+    # Here, we identify duplicate feature ROIs, so we only compute features
+    # on the unique subset.
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
+        hashes = np.round(blobs['rois'] * cfg.DEDUP_BOXES).dot(v)
+        _, index, inv_index = np.unique(hashes, return_index=True,
+                                        return_inverse=True)
+        blobs['rois'] = blobs['rois'][index, :]
+        boxes = boxes[index, :]
+
+    if cfg.TEST.HAS_RPN:
+        im_blob = blobs['data']
+        blobs['im_info'] = np.array(
+            [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
+            dtype=np.float32)
+    # forward pass
+    if cfg.TEST.HAS_RPN:
+        feed_dict={net.data: blobs['data'], net.im_info: blobs['im_info'], net.keep_prob: 1.0}
+    else:
+        feed_dict={net.data: blobs['data'], net.rois: blobs['rois'], net.keep_prob: 1.0}
+
+    cls_score, cls_prob, bbox_pred, rois = \
+        sess.run([net.get_output('cls_score'), net.get_output('cls_prob'), net.get_output('bbox_pred'),net.get_output('rois')],\
+                 feed_dict=feed_dict)
+    
+    if cfg.TEST.HAS_RPN:
+        assert len(im_scales) == 1, "Only single-image batch implemented"
+        boxes = rois[:, 1:5] / im_scales[0]
+
+
+    if cfg.TEST.SVM:
+        # use the raw scores before softmax under the assumption they
+        # were trained as linear SVMs
+        scores = cls_score
+    else:
+        # use softmax estimated probabilities
+        scores = cls_prob
+
+    if cfg.TEST.BBOX_REG:
+        # Apply bounding-box regression deltas
+        box_deltas = bbox_pred
+        pred_boxes = bbox_transform_inv(boxes, box_deltas)
+        pred_boxes = clip_boxes(pred_boxes, im.shape)
+    else:
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        # Map scores and predictions back to the original set of boxes
+        scores = scores[inv_index, :]
+        pred_boxes = pred_boxes[inv_index, :]
+
+    return scores, pred_boxes
+
 
 def vis_detections(im, class_name, dets, ax, thresh=0.5):
     """Draw detected bounding boxes."""
@@ -125,6 +273,9 @@ def parse_args():
                         default=' ')
     parser.add_argument('--conf', dest='conf', help='Confidence threshold [0.8]',
                         default=0.8, type=float)
+    parser.add_argument('--cfg', dest='cfg_file',
+                        help='optional config file',
+                        default=None, type=str)
 
     args = parser.parse_args()
 
@@ -135,6 +286,11 @@ if __name__ == '__main__':
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
 
     args = parse_args()
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+    else:
+    	raise Exception('Missing config file')
+        
     model_ext = glob.glob(args.model + '.*')
     if args.model == ' ' or not ( os.path.exists(args.model) or len(model_ext) == 3 ) :
         print ('current path is ' + os.path.abspath(__file__))
@@ -146,10 +302,10 @@ if __name__ == '__main__':
     net = get_network(args.demo_net)
     # load model
     if len(model_ext) == 3: # new checkpoint file
-    	print ('Loading meta data {:s}...'.format(args.model+'.meta')),
-    	saver = tf.train.import_meta_graph(args.model+'.meta')
+    	print ('Loading model and meta {:s}...'.format(args.model+'.meta')),
+    	#saver = tf.train.import_meta_graph(args.model+'.meta')
+    	saver = tf.train.Saver()
     	saver.restore(sess, args.model)
-    	sess.run(tf.global_variables_initializer())
     else: # old checkpoint file
     	print ('Loading network {:s}... '.format(args.demo_net)),
     	saver = tf.train.Saver()
