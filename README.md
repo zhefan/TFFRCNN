@@ -6,6 +6,7 @@ python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_im
 python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/Resnet50.npy --imdb voc_2007_trainval --iters 70000 --cfg ./experiments/cfgs/faster_rcnn_end2end.yml --network Resnet50_train --restore 0
 python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_imagenet.npy --imdb ade20k_train --iters 70000 --cfg ./experiments/cfgs/ade20k.yml --network VGGnet_train --restore 0
 python demo.py --model output/faster_rcnn_voc_vgg/ade20k/VGGnet_fast_rcnn_iter_3000.ckpt --conf 0.01 --cfg ./experiments/cfgs/ade20k.yml
+python ./faster_rcnn/train_net.py --gpu 0 --weights ./data/pretrain_model/VGG_imagenet.npy --imdb bbb_train --iters 70000 --cfg ./experiments/cfgs/bbb.yml --network VGGnet_train --restore 0
 ```
 
 This is an experimental **T**ensor **F**low implementation of **F**aster **RCNN** (**TFFRCNN**), mainly based on the work of [smallcorgi](https://github.com/smallcorgi/Faster-RCNN_TF) and [rbgirshick](https://github.com/rbgirshick/py-faster-rcnn). I have re-organized the libraries under `lib` path, making each of python modules independent to each other, so you can understand, re-write the code easily.
