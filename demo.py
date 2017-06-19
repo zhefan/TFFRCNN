@@ -224,7 +224,7 @@ def vis_detections(im, class_name, dets, ax, thresh=0.5):
                  fontsize=14)
     plt.axis('off')
     plt.tight_layout()
-    #plt.draw()
+    plt.draw()
 
 
 def demo(sess, net, image_name, CONF_THRESH):
@@ -326,4 +326,4 @@ if __name__ == '__main__':
         print 'Demo for {:s}'.format(im_name)
         demo(sess, net, im_name, args.conf)
 
-    plt.show()
+    #plt.show()
