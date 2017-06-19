@@ -224,7 +224,7 @@ def vis_detections(im, class_name, dets, ax, thresh=0.5):
                  fontsize=14)
     plt.axis('off')
     plt.tight_layout()
-    plt.draw()
+    #plt.draw()
 
 
 def demo(sess, net, image_name, CONF_THRESH):
@@ -240,7 +240,7 @@ def demo(sess, net, image_name, CONF_THRESH):
     timer.toc()
     print ('Detection took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
-
+    
     # Visualize detections for each class
     im = im[:, :, (2, 1, 0)]
     fig, ax = plt.subplots(figsize=(12, 12))
@@ -256,6 +256,7 @@ def demo(sess, net, image_name, CONF_THRESH):
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
         vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
+        fig.savefig('./output/img/'+os.path.splitext(os.path.basename(image_name))[0]+'_'+cls+'_viz.png')
 
 
 def parse_args():
